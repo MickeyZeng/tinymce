@@ -1,4 +1,4 @@
-import { Arr, Cell, Fun, Optional, Type } from '@ephox/katamari';
+import { Arr, Cell, Fun, Optional, Optionals } from '@ephox/katamari';
 import { Attribute, Css, SugarElement, SugarNode } from '@ephox/sugar';
 import { getAttrValue } from '../util/CellUtils';
 
@@ -172,11 +172,7 @@ const merging = (generators: Generators) => {
       Css.remove(raw, 'width');
       Css.remove(cell, 'width');
 
-      const scope = Attribute.get(cell, 'scope');
-
-      if (Type.isString(scope)) {
-        Attribute.set(raw, 'scope', scope);
-      }
+      Attribute.getOpt(cell, 'scope').each((scope) => Attribute.set(raw, 'scope', scope));
 
       return raw;
     };
@@ -184,34 +180,36 @@ const merging = (generators: Generators) => {
 
   const merge = (cells: SugarElement[]) => {
     const getScopeProperty = () => {
-      const baseScope = Attribute.get(cells[0], 'scope');
-      const scopes = [ 'row', 'col' ];
+      const attributeOpts = Arr.map(cells, (cell) => {
+        const attributeOpt = Attribute.getOpt(cell, 'scope');
 
-      const isMixed = Arr.exists(cells.slice(1), (c) => {
-        const scopeOpt = Attribute.getOpt(c, 'scope');
-
-        return scopeOpt.fold(
-          Fun.never,
-          (scope) => Arr.contains(scopes, scope) && scope !== baseScope
-        );
+        return attributeOpt.map((attribute) => attribute.substr(0, 3));
       });
 
-      return isMixed ? 'col' : baseScope;
+      const stringAttributes = Optionals.cat(attributeOpts);
+
+      if (stringAttributes.length === 0) {
+        return Optional.none();
+      } else {
+        const baseScope = stringAttributes[0];
+        const scopes = [ 'row', 'col' ];
+
+        const isMixed = Arr.exists(stringAttributes, (attribute) => {
+          return attribute !== baseScope && Arr.contains(scopes, attribute);
+        });
+        return Optional.from(isMixed ? 'col' : baseScope);
+      }
     };
 
     Css.remove(cells[0], 'width');
 
     const scope = getScopeProperty();
 
-    if (scope === 'col') {
-      Attribute.set(cells[0], 'scope', 'colgroup');
-    } else if (scope === 'row') {
-      Attribute.set(cells[0], 'scope', 'rowgroup');
-    }
+    scope.each((attribute) =>
+      Attribute.set(cells[0], 'scope', attribute + 'group')
+    );
 
-    return () => {
-      return cells[0];
-    };
+    return Fun.constant(cells[0]);
   };
 
   return {
