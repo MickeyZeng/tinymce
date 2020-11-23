@@ -8,7 +8,7 @@
 import { AlloyComponent, AlloyEvents, AlloySpec, Behaviour, Disabling, Gui, GuiFactory, Keying, Memento, Positioning, SimpleSpec, SystemEvents, VerticalDir } from '@ephox/alloy';
 import { Arr, Obj, Optional, Result } from '@ephox/katamari';
 import { PlatformDetection } from '@ephox/sand';
-import { Css } from '@ephox/sugar';
+import { Css, SugarNode, SugarShadowDom } from '@ephox/sugar';
 import Editor from 'tinymce/core/api/Editor';
 import I18n from 'tinymce/core/api/util/I18n';
 import { EditorUiApi } from 'tinymce/core/api/ui/Ui';
@@ -91,6 +91,12 @@ const setup = (editor: Editor): RenderInfo => {
   const deviceClasses = isTouch ? [ touchPlatformClass ] : [];
   const isToolbarBottom = Settings.isToolbarLocationBottom(editor);
 
+  const toolbarIsInRoot = () => {
+    const container = Settings.getUiContainer(editor);
+
+    return SugarNode.isTag('body')(container) || SugarShadowDom.isShadowRoot(container);
+  };
+
   const dirAttributes = I18n.isRtl() ? {
     attributes: {
       dir: 'rtl'
@@ -113,24 +119,34 @@ const setup = (editor: Editor): RenderInfo => {
     Css.set(uiMothership.element, 'width', document.body.clientWidth + 'px');
   };
 
-  const sink = GuiFactory.build({
-    dom: {
-      tag: 'div',
-      classes: [ 'tox', 'tox-silver-sink', 'tox-tinymce-aux' ].concat(platformClasses).concat(deviceClasses),
-      styles: {
-        width: document.body.clientWidth + 'px'
+  const makeSinkDefinition = () => {
+    const sinkDefinition: AlloySpec = {
+      dom: {
+        tag: 'div',
+        classes: [ 'tox', 'tox-silver-sink', 'tox-tinymce-aux' ].concat(platformClasses).concat(deviceClasses),
+        ...dirAttributes
       },
-      ...dirAttributes
-    },
-    behaviours: Behaviour.derive([
-      Positioning.config({
-        useFixed: () => isHeaderDocked()
-      })
-    ]),
-    events: AlloyEvents.derive([
-      AlloyEvents.run(SystemEvents.windowResize(), resizeUiMothership)
-    ])
-  });
+      behaviours: Behaviour.derive([
+        Positioning.config({
+          useFixed: () => isHeaderDocked()
+        })
+      ])
+    };
+
+    if (toolbarIsInRoot()) {
+      sinkDefinition.events = AlloyEvents.derive([
+        AlloyEvents.run(SystemEvents.windowResize(), resizeUiMothership)
+      ]);
+
+      sinkDefinition.dom.styles = {
+        width: document.body.clientWidth + 'px'
+      };
+    }
+
+    return sinkDefinition;
+  };
+
+  const sink = GuiFactory.build(makeSinkDefinition());
 
   const lazySink = () => Result.value<AlloyComponent, Error>(sink);
 
