@@ -6,7 +6,7 @@
  */
 
 import { AlloyComponent, AlloyEvents, AlloySpec, Behaviour, Disabling, Gui, GuiFactory, Keying, Memento, Positioning, SimpleSpec, SystemEvents, VerticalDir } from '@ephox/alloy';
-import { Arr, Obj, Optional, Result } from '@ephox/katamari';
+import { Arr, Merger, Obj, Optional, Result } from '@ephox/katamari';
 import { PlatformDetection } from '@ephox/sand';
 import { Css, SugarNode, SugarShadowDom } from '@ephox/sugar';
 import Editor from 'tinymce/core/api/Editor';
@@ -120,7 +120,7 @@ const setup = (editor: Editor): RenderInfo => {
   };
 
   const makeSinkDefinition = () => {
-    const sinkDefinition: AlloySpec = {
+    const sinkSpec: AlloySpec = {
       dom: {
         tag: 'div',
         classes: [ 'tox', 'tox-silver-sink', 'tox-tinymce-aux' ].concat(platformClasses).concat(deviceClasses),
@@ -133,17 +133,18 @@ const setup = (editor: Editor): RenderInfo => {
       ])
     };
 
-    if (toolbarIsInRoot()) {
-      sinkDefinition.events = AlloyEvents.derive([
+    const reactiveWidthSpec = {
+      dom: {
+        styles: { width: document.body.clientWidth + 'px' }
+      },
+      events: AlloyEvents.derive([
         AlloyEvents.run(SystemEvents.windowResize(), resizeUiMothership)
-      ]);
+      ])
+    };
 
-      sinkDefinition.dom.styles = {
-        width: document.body.clientWidth + 'px'
-      };
-    }
+    const isInRoot = toolbarIsInRoot();
+    return Merger.deepMerge(sinkSpec, isInRoot ? reactiveWidthSpec : {});
 
-    return sinkDefinition;
   };
 
   const sink = GuiFactory.build(makeSinkDefinition());
