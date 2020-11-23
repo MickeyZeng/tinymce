@@ -1,36 +1,27 @@
-import { Assertions, Chain, Pipeline } from '@ephox/agar';
+import { Assertions, Chain, Log, Pipeline, UiFinder } from '@ephox/agar';
 import { UnitTest } from '@ephox/bedrock-client';
 import { TinyApis, TinyLoader } from '@ephox/mcagar';
-import { Insert, Remove, SelectorFind, SugarBody, SugarElement, Width } from '@ephox/sugar';
+import { Insert, Remove, SugarBody, SugarElement, Width } from '@ephox/sugar';
 import Editor from 'tinymce/core/api/Editor';
 
 import Theme from 'tinymce/themes/silver/Theme';
 
-UnitTest.asynctest('Editor resize test', (success, failure) => {
+UnitTest.asynctest('Editor fixed_toolbar_container resize test', (success, failure) => {
   Theme();
-
-  const toolbarContainer = SugarElement.fromHtml('<div id="toolbar" style="width: 50%;"></div>');
+  const expectedWidth = 300;
+  const toolbarContainer = SugarElement.fromHtml(`<div id="toolbar" style="width: ${expectedWidth}px;"></div>`);
   Insert.append(SugarBody.body(), toolbarContainer);
-
   TinyLoader.setup((editor: Editor, onSuccess, onFailure) => {
     const tinyApis = TinyApis(editor);
     Pipeline.async({ }, [
-      tinyApis.sSetContent('fixed_toolbar_container test'),
-      tinyApis.sFocus(),
-      Chain.asStep(SugarBody.body(), [
-        Chain.op(() => {
-          // Add a border to ensure we're using the correct height/width (ie border-box sizing)
-          editor.dom.setStyles(editor.getContainer(), {
-            border: '2px solid #ccc'
-          });
-        }),
-        Chain.op(() => {
-          const html = SugarBody.body();
-          const sink = SelectorFind.descendant<HTMLElement>(html, '.tox-silver-sink');
-
-          const expectedWidth = Math.floor(Width.get(html) / 2);
-          Assertions.assertEq(`Sink should be ${expectedWidth}px wide`, expectedWidth, Width.get(sink.getOrDie()));
-        })
+      Log.stepsAsStep('TINY-6683', 'Should not resize the sink to the body width', [
+        tinyApis.sSetContent('fixed_toolbar_container test'),
+        tinyApis.sFocus(),
+        Chain.asStep(SugarBody.body(), [
+          UiFinder.cWaitFor('Wait for the sink to be rendered', '.tox-silver-sink'),
+          Chain.mapper((sink) => Width.get(sink)),
+          Assertions.cAssertEq(`Sink should be ${expectedWidth}px wide`, expectedWidth)
+        ])
       ])
     ], onSuccess, onFailure);
   },
