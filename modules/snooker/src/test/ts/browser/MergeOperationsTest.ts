@@ -1,5 +1,8 @@
 import { UnitTest } from '@ephox/bedrock-client';
+import { PlatformDetection } from '@ephox/sand';
 import * as Assertions from 'ephox/snooker/test/Assertions';
+
+const isIE = PlatformDetection.detect().browser.isIE();
 
 UnitTest.test('MergeOperationsTest', function () {
   Assertions.checkMerge(
@@ -86,7 +89,7 @@ UnitTest.test('MergeOperationsTest', function () {
     '<table style="border-collapse: collapse;">' +
       '<tbody>' +
         '<tr>' +
-          '<td scope="rowgroup" rowspan="2">A1<br>A2<br></td>' +
+          '<td ' + (isIE ? 'rowspan="2" scope="rowgroup"' : 'scope="rowgroup" rowspan="2"') + '>A1<br>A2<br></td>' +
           '<td>B1</td>' +
           '<td>C1</td>' +
         '</tr>' +
@@ -124,7 +127,7 @@ UnitTest.test('MergeOperationsTest', function () {
     '<table style="border-collapse: collapse;">' +
       '<tbody>' +
         '<tr>' +
-          '<td scope="colgroup" rowspan="2">A1<br>A2<br></td>' +
+          '<td ' + (isIE ? 'rowspan="2" scope="colgroup"' : 'scope="colgroup" rowspan="2"') + '>A1<br>A2<br></td>' +
           '<td>B1</td>' +
           '<td>C1</td>' +
         '</tr>' +
@@ -162,7 +165,7 @@ UnitTest.test('MergeOperationsTest', function () {
     '<table style="border-collapse: collapse;">' +
       '<tbody>' +
         '<tr>' +
-          '<td scope="colgroup" rowspan="2">A1<br>A2<br></td>' +
+          '<td ' + (isIE ? 'rowspan="2" scope="colgroup"' : 'scope="colgroup" rowspan="2"') + '>A1<br>A2<br></td>' +
           '<td>B1</td>' +
           '<td>C1</td>' +
         '</tr>' +
